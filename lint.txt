@@ -1,0 +1,38 @@
+constants.go:5:6: exported type FirmataCommand should have comment or be unexported
+constants.go:6:6: exported type SysExCommand should have comment or be unexported
+constants.go:7:6: exported type PinMode should have comment or be unexported
+constants.go:8:6: exported type PinState should have comment or be unexported
+constants.go:9:6: exported type SerialPort should have comment or be unexported
+constants.go:12:2: exported const ProtocolMajorVersion should have comment (or a comment on this block) or be unexported
+constants.go:15:2: comment on exported const MaxDataBytes should be of the form "MaxDataBytes ..."
+constants.go:30:2: comment on exported const ServoConfig should be of the form "ServoConfig ..."
+constants.go:60:2: don't use ALL_CAPS in Go names; use CamelCase
+constants.go:61:2: don't use ALL_CAPS in Go names; use CamelCase
+constants.go:62:2: don't use ALL_CAPS in Go names; use CamelCase
+constants.go:63:2: don't use ALL_CAPS in Go names; use CamelCase
+constants.go:70:2: comment on exported const Input should be of the form "Input ..."
+constants.go:80:2: comment on exported const HIGH should be of the form "HIGH ..."
+goduino.go:12:1: comment on exported type Goduino should be of the form "Goduino ..." (with optional leading article)
+goduino.go:40:1: comment on exported function New should be of the form "New ..."
+goduino.go:82:1: comment on exported method Goduino.Delay should be of the form "Delay ..."
+goduino.go:94:1: comment on exported method Goduino.PinMode should be of the form "PinMode ..."
+goduino.go:107:1: comment on exported method Goduino.EnableDigitalInput should be of the form "EnableDigitalInput ..."
+goduino.go:128:1: comment on exported method Goduino.DigitalWrite should be of the form "DigitalWrite ..."
+goduino.go:152:1: comment on exported method Goduino.EnableAnalogInput should be of the form "EnableAnalogInput ..."
+goduino.go:173:1: comment on exported method Goduino.AnalogWrite should be of the form "AnalogWrite ..."
+goduino.go:200:1: comment on exported method Goduino.SetAnalogSamplingInterval should be of the form "SetAnalogSamplingInterval ..."
+goduino.go:207:1: comment on exported method Goduino.GetValues should be of the form "GetValues ..."
+reply.go:8:6: exported type FirmataValue should have comment or be unexported
+reply.go:14:1: exported method FirmataValue.IsAnalog should have comment or be unexported
+reply.go:18:1: exported method FirmataValue.GetAnalogValue should have comment or be unexported
+reply.go:28:1: exported method FirmataValue.GetDigitalValue should have comment or be unexported
+reply.go:48:9: if block ends with a return statement, so drop this else and outdent its block
+serial_ext.go:3:6: exported type SerialSubCommand should have comment or be unexported
+serial_ext.go:5:1: comment on exported method Goduino.SerialConfig should be of the form "SerialConfig ..."
+serial_ext.go:20:1: comment on exported method Goduino.GetSerialData should be of the form "GetSerialData ..."
+serial_ext.go:27:2: can probably use "var data []byte" instead
+spi_ext.go:3:6: exported type SPISubCommand should have comment or be unexported
+spi_ext.go:5:1: comment on exported method Goduino.SPIConfig should be of the form "SPIConfig ..."
+spi_ext.go:17:1: comment on exported method Goduino.SPIReadWrite should be of the form "SPIReadWrite ..."
+spi_ext.go:34:2: can probably use "var data []byte" instead
+spi_ext.go:35:9: should omit 2nd value from range; this loop is equivalent to `for i := range ...`
