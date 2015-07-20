@@ -9,8 +9,8 @@ type PinState uint8
 type SerialPort uint8
 
 const (
-	ProtocolMajorVersion  = 2
-	ProtocolMinorVersion  = 3
+	ProtocolMajorVersion = 2
+	ProtocolMinorVersion = 3
 	ProtocolBugFixVersion = 6
 
 	// max number of data bytes in non-Sysex messages

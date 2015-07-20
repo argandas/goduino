@@ -25,22 +25,6 @@ func (v FirmataValue) GetAnalogValue() (pin int, val int, err error) {
 	return
 }
 
-func (v FirmataValue) GetDigitalValue() (port byte, val map[byte]interface{}, err error) {
-	if v.IsAnalog() {
-		err = fmt.Errorf("Cannot get digital value for analog pin")
-		return
-	}
-
-	port = byte(v.valueType & ^DigitalMessage)
-	val = make(map[byte]interface{})
-	mask := 0x01
-	for i := byte(0); i < 8; i++ {
-		val[port*8+i] = ((v.value & mask) > 0)
-		mask = mask * 2
-	}
-	return
-}
-
 func (v FirmataValue) String() string {
 	if v.IsAnalog() {
 		p, v, _ := v.GetAnalogValue()

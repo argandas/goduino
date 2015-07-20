@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-// PinMode configures the specified pin to behave either as an input or an output.
+// PinMode configures the specified pin to behave either as an input or an output. 
 func (ino *Goduino) PinMode(pin int, mode PinMode) error {
 	if ino.pinModes[pin][mode] == nil {
 		return fmt.Errorf("Pin mode %v not supported by pin %v", mode, pin)
@@ -18,9 +18,9 @@ func (ino *Goduino) PinMode(pin int, mode PinMode) error {
 }
 
 // DigitalWrite write a HIGH or a LOW value to a digital pin.
-//
-// If the pin has been configured as an OUTPUT with pinMode(),
-// its voltage will be set to the corresponding value:
+// 
+// If the pin has been configured as an OUTPUT with pinMode(), 
+// its voltage will be set to the corresponding value: 
 // 5V (or 3.3V on 3.3V boards) for HIGH, 0V (ground) for LOW.
 func (ino *Goduino) DigitalWrite(pin int, value PinState) error {
 	if uint8(pin) < 0 || pin > len(ino.pinModes) && ino.pinModes[pin][Output] != nil {
