@@ -4,11 +4,11 @@ import (
 	"fmt"
 )
 
-// AnalogWrite writes an analog value (PWM wave) to a pin. 
-// Can be used to light a LED at varying brightnesses or drive a motor at various speeds. 
-// After a call to analogWrite(), the pin will generate a steady square wave of the specified duty cycle until the next call to analogWrite() (or a call to digitalRead() or digitalWrite() on the same pin). 
-// The frequency of the PWM signal on most pins is approximately 490 Hz. 
-// On the Uno and similar boards, pins 5 and 6 have a frequency of approximately 980 Hz. 
+// AnalogWrite writes an analog value (PWM wave) to a pin.
+// Can be used to light a LED at varying brightnesses or drive a motor at various speeds.
+// After a call to analogWrite(), the pin will generate a steady square wave of the specified duty cycle until the next call to analogWrite() (or a call to digitalRead() or digitalWrite() on the same pin).
+// The frequency of the PWM signal on most pins is approximately 490 Hz.
+// On the Uno and similar boards, pins 5 and 6 have a frequency of approximately 980 Hz.
 func (ino *Goduino) AnalogWrite(pin, value int) error {
 	if pin < 0 || pin > len(ino.pinModes) && ino.pinModes[pin][Analog] != nil {
 		return fmt.Errorf("Invalid pin number %d\n", pin)
