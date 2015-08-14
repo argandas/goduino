@@ -79,6 +79,25 @@ func New(dev string, baud int) (client *Goduino, err error) {
 	return
 }
 
+// PinMode configures the specified pin to behave either as an input or an output.
+func (ino *Goduino) PinMode(pin int, mode PinMode) error {
+	if ino.pinModes[pin][mode] == nil {
+		return fmt.Errorf("Pin mode %v not supported by pin %v", mode, pin)
+	}
+	cmd := []byte{byte(SetPinMode), (byte(pin) & 0x7F), byte(mode)}
+	if err := ino.sendCommand(cmd); err != nil {
+		return err
+	}
+	switch mode {
+	case Input:
+		ino.EnableDigitalInput(uint(pin), true)
+	case Analog:
+		ino.EnableAnalogInput(uint(pin), true)
+	}
+	ino.Log.Printf("pinMode(%d, %s)\r\n", pin, mode)
+	return nil
+}
+
 // Close the serial connection to properly clean up after ourselves
 // Usage: defer client.Close()
 func (ino *Goduino) Delay(duration time.Duration) {
@@ -89,27 +108,6 @@ func (ino *Goduino) Delay(duration time.Duration) {
 // Usage: defer client.Close()
 func (ino *Goduino) Close() {
 	(*ino.conn).Close()
-}
-
-// Specified if a analog Pin should be watched for input.
-// Values will be streamed back over a channel which can be retrieved by the GetValues() call
-func (ino *Goduino) EnableAnalogInput(pin uint, val bool) (err error) {
-	if pin < 0 || pin > uint(len(ino.pinModes)) && ino.pinModes[pin][Analog] != nil {
-		err = fmt.Errorf("Invalid pin number %v\n", pin)
-		return
-	}
-
-	ch := byte(ino.analogPinsChannelMap[int(pin)])
-	ino.Log.Printf("Enable analog inout on pin %v channel %v", pin, ch)
-	if val {
-		cmd := []byte{byte(EnableAnalogInput) | ch, 0x01}
-		err = ino.sendCommand(cmd)
-	} else {
-		cmd := []byte{byte(EnableAnalogInput) | ch, 0x00}
-		err = ino.sendCommand(cmd)
-	}
-
-	return
 }
 
 func (ino *Goduino) sendCommand(cmd []byte) (err error) {
@@ -134,6 +132,6 @@ func (ino *Goduino) SetAnalogSamplingInterval(ms byte) (err error) {
 }
 
 // Get the channel to retrieve analog and digital pin values
-func (ino *Goduino) GetValues() <-chan FirmataValue {
+func (ino *Goduino) getValues() <-chan FirmataValue {
 	return ino.valueChan
 }

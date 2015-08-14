@@ -25,3 +25,24 @@ func (ino *Goduino) AnalogWrite(pin, value int) error {
 	ino.Log.Printf("analogWrite(%d, %d)\r\n", pin, value)
 	return nil
 }
+
+// Specified if a analog Pin should be watched for input.
+// Values will be streamed back over a channel which can be retrieved by the GetValues() call
+func (ino *Goduino) EnableAnalogInput(pin uint, val bool) (err error) {
+	if pin < 0 || pin > uint(len(ino.pinModes)) && ino.pinModes[pin][Analog] != nil {
+		err = fmt.Errorf("Invalid pin number %v\n", pin)
+		return
+	}
+
+	ch := byte(ino.analogPinsChannelMap[int(pin)])
+	ino.Log.Printf("Enable analog inout on pin %v channel %v", pin, ch)
+	if val {
+		cmd := []byte{byte(EnableAnalogInput) | ch, 0x01}
+		err = ino.sendCommand(cmd)
+	} else {
+		cmd := []byte{byte(EnableAnalogInput) | ch, 0x00}
+		err = ino.sendCommand(cmd)
+	}
+
+	return
+}
