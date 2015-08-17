@@ -107,21 +107,33 @@ func (ino *Goduino) PinMode(pin, mode int) error {
 	if uint8(pin) < 0 || pin > len(ino.board.Pins()) {
 		return fmt.Errorf("Invalid pin number %v\n", pin)
 	}
-	// Set pin mode
-	if err := ino.board.SetPinMode(pin, mode); err != nil {
-		return err
-	}
-	if mode != Analog {
-		if err := ino.board.ReportAnalog(pin, 1); err != nil {
+	switch mode {
+	// If mode == Input
+	case Input:
+		// Set pin mode
+		if err := ino.board.SetPinMode(pin, mode); err != nil {
 			return err
 		}
-		<-time.After(10 * time.Millisecond)
-	}
-	if mode != Input {
 		if err := ino.board.ReportDigital(pin, 1); err != nil {
 			return err
 		}
 		<-time.After(10 * time.Millisecond)
+	// If mode == Analog
+	case Analog:
+		pin = ino.digitalPin(pin)
+		// Set pin mode
+		if err := ino.board.SetPinMode(pin, mode); err != nil {
+			return err
+		}
+		if err := ino.board.ReportAnalog(pin, 1); err != nil {
+			return err
+		}
+		<-time.After(10 * time.Millisecond)
+	default:
+		// Set pin mode
+		if err := ino.board.SetPinMode(pin, mode); err != nil {
+			return err
+		}
 	}
 	// PinMode was successful
 	ino.logger.Printf("pinMode(%d, %s)\r\n", pin, PinMode(mode))

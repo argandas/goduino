@@ -18,12 +18,13 @@ func (ino *Goduino) DigitalWrite(pin, value int) error {
 
 // DigitalRead reads the value from a specified digital pin, either HIGH or LOW.
 func (ino *Goduino) DigitalRead(pin int) (value int, err error) {
-	pin = ino.digitalPin(pin)
 	// Check if pin is configured as input
 	if ino.board.Pins()[pin].Mode != Input {
 		if err = ino.PinMode(pin, Input); err != nil {
 			return
 		}
 	}
-	return ino.board.Pins()[pin].Value, nil
+	value = ino.board.Pins()[pin].Value
+	ino.logger.Printf("digitalRead(%d) -> %d\r\n", pin, value)
+	return
 }
