@@ -2,6 +2,7 @@ package goduino
 
 import (
 	"fmt"
+	"github.com/argandas/goduino/firmata"
 	"github.com/tarm/serial"
 	"io"
 	"log"
@@ -9,92 +10,121 @@ import (
 	"time"
 )
 
+const (
+	Input  = firmata.Input
+	Output = firmata.Output
+	Analog = firmata.Analog
+	Pwm    = firmata.Pwm
+	Servo  = firmata.Servo
+)
+
+type firmataBoard interface {
+	Connect(io.ReadWriteCloser) error
+	Disconnect() error
+	Pins() []firmata.Pin
+	AnalogWrite(int, int) error
+	SetPinMode(int, int) error
+	ReportAnalog(int, int) error
+	ReportDigital(int, int) error
+	DigitalWrite(int, int) error
+	I2cRead(int, int) error
+	I2cWrite(int, []byte) error
+	I2cConfig(int) error
+}
+
 // Arduino Firmata client for golang
 type Goduino struct {
-	serialDev string
-	baud      int
-	conn      *io.ReadWriteCloser
-	Log       *log.Logger
-
-	protocolVersion []byte
-	firmwareVersion []int
-	firmwareName    string
-
-	ready             bool
-	analogMappingDone bool
-	capabilityDone    bool
-
-	digitalPinState [8]byte
-
-	analogPinsChannelMap map[int]byte
-	analogChannelPinsMap map[byte]int
-	pinModes             []map[PinMode]interface{}
-
-	valueChan  chan FirmataValue
-	serialChan chan string
-	spiChan    chan []byte
-
-	Verbose bool
+	name    string
+	port    string
+	board   firmataBoard
+	conn    io.ReadWriteCloser
+	openSP  func(port string) (io.ReadWriteCloser, error)
+	logger  *log.Logger
+	verbose bool
 }
 
 // Creates a new Goduino object and connects to the Arduino board
 // over specified serial port. This function blocks till a connection is
 // succesfullt established and pin mappings are retrieved.
-func New(dev string, baud int) (client *Goduino, err error) {
-	var conn io.ReadWriteCloser
-
-	c := &serial.Config{Name: dev, Baud: baud}
-	conn, err = serial.OpenPort(c)
-	if err != nil {
-		return nil, err
+func New(name string, args ...interface{}) *Goduino {
+	// Create new Goduino client
+	goduino := &Goduino{
+		name:  name,
+		port:  "",
+		conn:  nil,
+		board: firmata.New(),
+		openSP: func(port string) (io.ReadWriteCloser, error) {
+			return serial.OpenPort(&serial.Config{Name: port, Baud: 57600})
+		},
+		logger:  log.New(os.Stdout, fmt.Sprintf("[%s] ", name), log.Ltime),
+		verbose: true,
 	}
-
-	client = &Goduino{
-		serialDev: dev,
-		baud:      baud,
-		conn:      &conn,
-		Log:       log.New(os.Stdout, "[goduino] ", log.Ltime),
-	}
-	go client.replyReader()
-
-	conn.Write([]byte{byte(SystemReset)})
-	t := time.NewTicker(time.Second)
-
-	for !(client.ready && client.analogMappingDone && client.capabilityDone) {
-		select {
-		case <-t.C:
-			//no-op
-		case <-time.After(time.Second * 15):
-			client.Log.Print("No response in 30 seconds. Resetting arduino")
-			conn.Write([]byte{byte(SystemReset)})
-		case <-time.After(time.Second * 30):
-			client.Log.Print("Unable to initialize connection")
-			conn.Close()
-			client = nil
+	// Parse variadic args
+	for _, arg := range args {
+		switch arg.(type) {
+		case string:
+			goduino.port = arg.(string)
+		case io.ReadWriteCloser:
+			goduino.conn = arg.(io.ReadWriteCloser)
 		}
 	}
-
-	client.Log.Print("Client ready to use")
-
-	return
+	return goduino
 }
 
-// PinMode configures the specified pin to behave either as an input or an output.
-func (ino *Goduino) PinMode(pin int, mode PinMode) error {
-	if ino.pinModes[pin][mode] == nil {
-		return fmt.Errorf("Pin mode %v not supported by pin %v", mode, pin)
+// Connect starts a connection to the firmata board.
+func (ino *Goduino) Connect() error {
+	if ino.conn == nil {
+		// Try to connect to serial port
+		sp, err := ino.openSP(ino.Port())
+		if err != nil {
+			return err
+		}
+		// Serial connection was successful
+		ino.conn = sp
 	}
-	cmd := []byte{byte(SetPinMode), (byte(pin) & 0x7F), byte(mode)}
-	if err := ino.sendCommand(cmd); err != nil {
+	// Firmata connection
+	return ino.board.Connect(ino.conn)
+}
+
+// Disconnect closes the io connection to the firmata board
+func (ino *Goduino) Disconnect() (err error) {
+	if ino.board != nil {
+		// Disconnect firmata board
+		return ino.board.Disconnect()
+	}
+	return nil
+}
+
+// Port returns the  FirmataAdaptors port
+func (ino *Goduino) Port() string { return ino.port }
+
+// Name returns the  FirmataAdaptors name
+func (ino *Goduino) Name() string { return ino.name }
+
+// PinMode configures the specified pin to behave either as an input or an output.
+func (ino *Goduino) PinMode(pin, mode int) error {
+	// Check if pin is valid
+	if uint8(pin) < 0 || pin > len(ino.board.Pins()) {
+		return fmt.Errorf("Invalid pin number %v\n", pin)
+	}
+	// Set pin mode
+	if err := ino.board.SetPinMode(pin, mode); err != nil {
 		return err
 	}
-	switch mode {
-	case Input:
-		ino.EnableDigitalInput(uint(pin), true)
-	case Analog:
-		ino.EnableAnalogInput(uint(pin), true)
+	if mode != Analog {
+		if err := ino.board.ReportAnalog(pin, 1); err != nil {
+			return err
+		}
+		<-time.After(10 * time.Millisecond)
 	}
-	ino.Log.Printf("pinMode(%d, %s)\r\n", pin, mode)
+	if mode != Input {
+		if err := ino.board.ReportDigital(pin, 1); err != nil {
+			return err
+		}
+		<-time.After(10 * time.Millisecond)
+	}
+	// PinMode was successful
+	ino.logger.Printf("pinMode(%d, %s)\r\n", pin, PinMode(mode))
 	return nil
 }
 
@@ -104,34 +134,25 @@ func (ino *Goduino) Delay(duration time.Duration) {
 	time.Sleep(duration)
 }
 
-// Close the serial connection to properly clean up after ourselves
-// Usage: defer client.Close()
-func (ino *Goduino) Close() {
-	(*ino.conn).Close()
+// digitalPin converts pin number to digital mapping
+func (ino *Goduino) digitalPin(pin int) int {
+	return pin + 14
 }
 
-func (ino *Goduino) sendCommand(cmd []byte) (err error) {
-	bStr := ""
-	for _, b := range cmd {
-		bStr = bStr + fmt.Sprintf(" %#2x", b)
+type PinMode uint8
+
+func (m PinMode) String() string {
+	switch {
+	case m == Input:
+		return "INPUT"
+	case m == Output:
+		return "OUTPUT"
+	case m == Analog:
+		return "ANALOG"
+	case m == Pwm:
+		return "PWM"
+	case m == Servo:
+		return "SERVO"
 	}
-
-	if ino.Verbose {
-		ino.Log.Printf("Command send%v\n", bStr)
-	}
-
-	_, err = (*ino.conn).Write(cmd)
-	return
-}
-
-// Sets the polling interval in milliseconds for analog pin samples
-func (ino *Goduino) SetAnalogSamplingInterval(ms byte) (err error) {
-	data := to7Bit(ms)
-	err = ino.sendSysEx(SamplingInterval, data[0], data[1])
-	return
-}
-
-// Get the channel to retrieve analog and digital pin values
-func (ino *Goduino) getValues() <-chan FirmataValue {
-	return ino.valueChan
+	return "UNKNOWN"
 }
