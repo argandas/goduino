@@ -34,10 +34,12 @@ import (
 func main() {
 	arduino := goduino.New("myArduino", "COM1")
 	err := arduino.Connect()
-	defer arduino.Disconnect()
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
+	defer arduino.Disconnect()
+	
 	arduino.PinMode(13, goduino.Output)
 	for {
 		arduino.DigitalWrite(13, 1)
